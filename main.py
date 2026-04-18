@@ -1,13 +1,20 @@
 import Database
 
 def main_menu():
-return input(“Select an option: ”)
+    print ("Conference Management")
+    print ("------------------------")
+    print(" ")
+    print("MENU")
+    print("====")
+    print ("1 - View Speakers & Sessions")
+    print ("2 - View Attendees by company")
+    print ("3 - Add New Attendee")
+    print ("4 - View Connected Attendees")
+    print ("5 - Add Attendee Connection")
+    print ("6 - View Rooms")
+    print ("x - Exit Application")
+    
+    return input("Choice: ")
 
-def main_menu():
-number = get_number()
-otherfilesname.option1(nmuber)
-
-if _name_ == “_main_”:
-main()
-
-
+if __name__ == "__main__":
+    main_menu()
