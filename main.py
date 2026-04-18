@@ -1,4 +1,4 @@
-Import Database
+import Database
 
 def main_menu():
 return input(“Select an option: ”)
