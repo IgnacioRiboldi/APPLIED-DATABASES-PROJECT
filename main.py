@@ -1,10 +1,8 @@
-import Database
 
 def main_menu():
-    print ("Conference Management")
+    print ("\nConference Management")
     print ("------------------------")
-    print(" ")
-    print("MENU")
+    print("\nMENU")
     print("====")
     print ("1 - View Speakers & Sessions")
     print ("2 - View Attendees by company")
@@ -17,4 +15,30 @@ def main_menu():
     return input("Choice: ")
 
 if __name__ == "__main__":
-    main_menu()
+    while true:
+        choice = main_menu()
+        
+        if choice == "1":
+            Database.view_speakers_sessions()
+        
+        elif choice =="2";
+            Database.view_attendees_by_company()
+
+        elif choice =="3";
+            Database.add_new_attendee()
+            
+        elif choice =="4";
+            Database.view_connected_attendees()
+            
+        elif choice =="5";
+            Database.add_attendee_connection()
+
+        elif choice =="6";
+            Database.view_rooms()
+
+        elif choice =="x";
+            print("See you next time!")
+            break
+        
+        else:
+            print("Invalid option")
