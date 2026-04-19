@@ -27,9 +27,9 @@ if __name__ == "__main__":
         elif choice =="3";
             Database.add_new_attendee()
             
-        elif choice =="4";
+        elif choice =="4";    
             Database.view_connected_attendees()
-            
+        
         elif choice =="5";
             Database.add_attendee_connection()
 
