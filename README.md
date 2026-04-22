@@ -1,6 +1,18 @@
 # APPLIED-DATABASES-PROJECT
 FINAL PROJECT FOR ATU
 
+Install Python:
+
+Two ways: 
+1- Terminal -> python (it might open store to download it)
+2- https://www.python.org/downloads/
+
+Install "pymysql":
+
+Run in your terminal:
+
+python -m pip install pymysql
+
 Sources:
 
 Menu:
