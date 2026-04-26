@@ -1,4 +1,6 @@
 import pymysql
+import main
+import datetime
 
 def connect():
     return pymysql.connect(
@@ -92,12 +94,76 @@ def view_attendees_by_company():
 
     conn.close()
 
-
+from datetime import datetime
 
 def add_new_attendee():
-    print("Not implemented yet")
+    conn = connect()
+    cur = conn.cursor()
 
+    # Inputs
+    new_user_id_input = input("Insert new user ID: ")
+    new_user_name = input("Insert new user Name: ")
+    new_user_dob = input("Insert new user DOB (YYYY-MM-DD): ")
+    new_user_gender = input("Insert new user Gender (Male/Female): ")
+    new_user_company_input = input("Insert new user Company: ")
 
+    # Validations
+    try:
+        new_user_id = int(new_user_id_input)
+    except ValueError:
+        print(f'*** ERROR *** (1366, "Incorrect integer value: \'{new_user_id_input}\' at row 1")')
+        conn.close()
+        return
+
+    try:
+        new_user_company = int(new_user_company_input)
+    except ValueError:
+        print(f'*** ERROR *** (1366, "Incorrect integer value: \'{new_user_company_input}\' at row 1")')
+        conn.close()
+        return
+
+    # DOB validation
+    try:
+        datetime.strptime(new_user_dob, "%Y-%m-%d")
+    except ValueError:
+        print(f'*** ERROR *** (1292, "Incorrect date value: \'{new_user_dob}\' at row 1")')
+        conn.close()
+        return
+
+    # Gender validation
+    new_user_gender = new_user_gender.strip().capitalize()
+    if new_user_gender not in ["Male", "Female"]:
+        print("*** ERROR *** Gender must be Male/Female")
+        conn.close()
+        return
+
+    # Company exists
+    cur.execute("SELECT * FROM company WHERE companyID = %s", (new_user_company,))
+    if not cur.fetchone():
+        print(f"*** ERROR *** Company ID: {new_user_company} does not exist")
+        conn.close()
+        return
+
+    # Attendee already exists
+    cur.execute("SELECT * FROM attendee WHERE attendeeID = %s", (new_user_id,))
+    if cur.fetchone():
+        print(f"*** ERROR *** Attendee ID: {new_user_id} already exists")
+        conn.close()
+        return
+
+    # Add
+    cur.execute("""
+        INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
+        VALUES (%s, %s, %s, %s, %s)
+    """, (new_user_id, new_user_name, new_user_dob, new_user_gender, new_user_company))
+    
+    conn.commit()
+    conn.close()
+
+    print("Attendee successfully added")
+    return
+    
+    
 def add_attendee_connection():
     print("Not implemented yet")
 

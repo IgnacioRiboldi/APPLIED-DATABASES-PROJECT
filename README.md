@@ -27,9 +27,11 @@ Cursor:
 
 https://www.geeksforgeeks.org/sql/what-is-cursor-in-sql/
 
-Cur fetchall
+Fetchall and Fetchone
 
-Return all (remaining) rows of a query result as a list. Return an empty list if no rows are available. Note that the arraysize attribute can affect the performance of this operation.
+Fetchall: Return all (remaining) rows of a query result as a list. Return an empty list if no rows are available. Note that the arraysize attribute can affect the performance of this operation.
+
+Fetchone: If row_factory is None, return the next row query result set as a tuple. Else, pass it to the row factory and return its result. Return None if no more data is available.
 
 https://docs.python.org/3/library/sqlite3.html#sqlite3.Cursor.fetchone
 
@@ -42,3 +44,11 @@ https://www.postgresql.org/docs/current/queries-table-expressions.html
 Input Validation:
 
 https://www.geeksforgeeks.org/python/input-validation-in-python/
+
+Date and Time
+
+https://www.w3schools.com/python/python_datetime.asp
+
+Commit
+
+https://dev.mysql.com/doc/connector-python/en/connector-python-api-mysqlconnection-commit.html
