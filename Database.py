@@ -1,14 +1,27 @@
 import pymysql
-import main
 import datetime
+from neo4j import GraphDatabase
+
+
+# MYSQL CONNECTION
 
 def connect():
     return pymysql.connect(
         host="localhost",
         user="root",
-        password="root",
-        db="appdbproj"
+        auth=("neo4j", "neo4j")
     )
+
+
+# NEO4J CONNECTION
+
+def connect_neo4j():
+    uri = "bolt://localhost:7687"
+    user = "neo4j"
+    password = "neo4j"
+
+    return GraphDatabase.driver(uri, auth=(user, password))
+
 
 def view_speakers_sessions():
     speaker = input("Enter speaker name: ")
@@ -36,6 +49,7 @@ def view_speakers_sessions():
         print("No speaker was found of that name")
 
     conn.close()
+
 
 def view_attendees_by_company():
 
@@ -87,83 +101,95 @@ def view_attendees_by_company():
 
     if rows:
         print(f"\n{company_name} Attendees:\n")
-        for attendeeName, attendeeDOB, sessionTitle, speakerName, sessionDate, roomName in rows:
-            print(f"Attendee: {attendeeName} | DOB: {attendeeDOB} | Session: {sessionTitle} | Speaker: {speakerName} | Date: {sessionDate} | Room: {roomName}")
+        for row in rows:
+            print(row)
     else:
         print(f"No attendees found for {company_name}")
 
     conn.close()
 
-from datetime import datetime
 
 def add_new_attendee():
     conn = connect()
     cur = conn.cursor()
 
-    # Inputs
-    new_user_id_input = input("Insert new user ID: ")
+    new_user_id = int(input("Insert new user ID: "))
     new_user_name = input("Insert new user Name: ")
-    new_user_dob = input("Insert new user DOB (YYYY-MM-DD): ")
-    new_user_gender = input("Insert new user Gender (Male/Female): ")
-    new_user_company_input = input("Insert new user Company: ")
-
-    # Validations
-    try:
-        new_user_id = int(new_user_id_input)
-    except ValueError:
-        print(f'*** ERROR *** (1366, "Incorrect integer value: \'{new_user_id_input}\' at row 1")')
-        conn.close()
-        return
+    new_user_dob = input("Insert DOB (YYYY-MM-DD): ")
+    new_user_gender = input("Insert Gender (Male/Female): ")
+    new_user_company = int(input("Insert Company ID: "))
 
     try:
-        new_user_company = int(new_user_company_input)
+        datetime.datetime.strptime(new_user_dob, "%Y-%m-%d")
     except ValueError:
-        print(f'*** ERROR *** (1366, "Incorrect integer value: \'{new_user_company_input}\' at row 1")')
-        conn.close()
+        print("Invalid date")
         return
 
-    # DOB validation
-    try:
-        datetime.strptime(new_user_dob, "%Y-%m-%d")
-    except ValueError:
-        print(f'*** ERROR *** (1292, "Incorrect date value: \'{new_user_dob}\' at row 1")')
-        conn.close()
-        return
-
-    # Gender validation
-    new_user_gender = new_user_gender.strip().capitalize()
-    if new_user_gender not in ["Male", "Female"]:
-        print("*** ERROR *** Gender must be Male/Female")
-        conn.close()
-        return
-
-    # Company exists
-    cur.execute("SELECT * FROM company WHERE companyID = %s", (new_user_company,))
-    if not cur.fetchone():
-        print(f"*** ERROR *** Company ID: {new_user_company} does not exist")
-        conn.close()
-        return
-
-    # Attendee already exists
-    cur.execute("SELECT * FROM attendee WHERE attendeeID = %s", (new_user_id,))
-    if cur.fetchone():
-        print(f"*** ERROR *** Attendee ID: {new_user_id} already exists")
-        conn.close()
-        return
-
-    # Add
     cur.execute("""
         INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
         VALUES (%s, %s, %s, %s, %s)
     """, (new_user_id, new_user_name, new_user_dob, new_user_gender, new_user_company))
-    
+
     conn.commit()
     conn.close()
 
-    print("Attendee successfully added")
-    return
-    
-    
+    print("Attendee added")
+
+def view_connected_attendees():
+    attendee = input("Enter Attendee ID: ")
+
+    try:
+        attendee_id = int(attendee)
+    except ValueError:
+        print("*** ERROR *** Invalid attendee ID")
+        return
+
+    driver = connect_neo4j()
+
+    with driver.session(database="appdbprojNeo4j") as session:
+
+        # Get attendee name
+        result = session.run(
+            "MATCH (a:Attendee {AttendeeID: $id}) RETURN a.AttendeeID AS id",
+            id=attendee_id
+        )
+
+        record = result.single()
+
+        if not record:
+            print("*** ERROR *** Attendee does not exist")
+            driver.close()
+            return
+
+        # Get name separately
+        name_result = session.run(
+            "MATCH (a:Attendee {AttendeeID: $id}) RETURN a.AttendeeID AS id",
+            id=attendee_id
+        )
+
+        print(f'Attendee ID: {attendee_id}')
+        print("------------------------------")
+
+        # Get connections
+        query = """
+        MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(b:Attendee)
+        RETURN b.AttendeeID AS id
+        """
+
+        results = session.run(query, id=attendee_id)
+
+        connections = list(results)
+
+        if not connections:
+            print("No connections")
+        else:
+            for r in connections:
+                print(f"-> Attendee {r['id']}")
+
+    driver.close()
+
+
+# PENDING
 def add_attendee_connection():
     print("Not implemented yet")
 

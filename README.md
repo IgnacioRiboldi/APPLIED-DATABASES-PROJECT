@@ -13,6 +13,10 @@ Run in your terminal:
 
 python -m pip install pymysql
 
+Install also Neo4j
+
+python -m pip install neo4j
+
 Sources:
 
 Menu:
