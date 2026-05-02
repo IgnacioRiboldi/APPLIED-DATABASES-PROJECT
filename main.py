@@ -1,5 +1,6 @@
 import Database
 
+
 def main_menu():
     print("\nConference Management")
     print("------------------------")
@@ -39,9 +40,9 @@ if __name__ == "__main__":
         elif choice == "6":
             Database.view_rooms()
 
-        elif choice == "x":
+        elif choice.lower() == "x":
             print("See you next time!")
             break
 
         else:
-            print("Invalid option")
+            print("*** ERROR *** Invalid option")

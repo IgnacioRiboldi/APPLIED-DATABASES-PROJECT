@@ -2,14 +2,14 @@ import pymysql
 import datetime
 from neo4j import GraphDatabase
 
-
 # MYSQL CONNECTION
 
 def connect():
     return pymysql.connect(
         host="localhost",
         user="root",
-        auth=("neo4j", "neo4j")
+        password="root",
+        db="appdbproj"
     )
 
 
@@ -18,10 +18,12 @@ def connect():
 def connect_neo4j():
     uri = "bolt://localhost:7687"
     user = "neo4j"
-    password = "neo4j"
+    password = "neo4jneo4j"
 
     return GraphDatabase.driver(uri, auth=(user, password))
 
+
+# MYSQL FUNCTIONS
 
 def view_speakers_sessions():
     speaker = input("Enter speaker name: ")
@@ -52,7 +54,6 @@ def view_speakers_sessions():
 
 
 def view_attendees_by_company():
-
     conn = connect()
     cur = conn.cursor()
 
@@ -63,7 +64,7 @@ def view_attendees_by_company():
             if company_id > 0:
                 break
         except ValueError:
-            pass
+            print("*** ERROR *** Invalid Company ID")
 
     cur.execute(
         "SELECT companyName FROM company WHERE companyID = %s",
@@ -87,12 +88,9 @@ def view_attendees_by_company():
             s.sessionDate, 
             ro.roomName
         FROM attendee a
-        INNER JOIN registration r 
-            ON a.attendeeID = r.attendeeID
-        INNER JOIN session s 
-            ON r.sessionID = s.sessionID
-        INNER JOIN room ro 
-            ON s.roomID = ro.roomID
+        INNER JOIN registration r ON a.attendeeID = r.attendeeID
+        INNER JOIN session s ON r.sessionID = s.sessionID
+        INNER JOIN room ro ON s.roomID = ro.roomID
         WHERE a.attendeeCompanyID = %s
     """
 
@@ -101,8 +99,21 @@ def view_attendees_by_company():
 
     if rows:
         print(f"\n{company_name} Attendees:\n")
+
         for row in rows:
-            print(row)
+            attendee_name = row[0]
+            attendee_dob = row[1].strftime("%Y-%m-%d")
+            session_title = row[2]
+            speaker_name = row[3]
+            session_date = row[4].strftime("%Y-%m-%d")
+            room_name = row[5]
+
+            print(
+                f"Attendee: {attendee_name} | DOB: {attendee_dob} | "
+                f"Session: {session_title} | Speaker: {speaker_name} | "
+                f"Date: {session_date} | Room: {room_name}"
+            )
+
     else:
         print(f"No attendees found for {company_name}")
 
@@ -126,7 +137,8 @@ def add_new_attendee():
         return
 
     cur.execute("""
-        INSERT INTO attendee (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
+        INSERT INTO attendee 
+        (attendeeID, attendeeName, attendeeDOB, attendeeGender, attendeeCompanyID)
         VALUES (%s, %s, %s, %s, %s)
     """, (new_user_id, new_user_name, new_user_dob, new_user_gender, new_user_company))
 
@@ -134,46 +146,62 @@ def add_new_attendee():
     conn.close()
 
     print("Attendee added")
+    
+# NEO4J FUNCTIONS
 
 def view_connected_attendees():
-    attendee = input("Enter Attendee ID: ")
 
-    try:
-        attendee_id = int(attendee)
-    except ValueError:
-        print("*** ERROR *** Invalid attendee ID")
+    while True:
+        user_input = input("Enter Attendee ID: ")
+        try:
+            attendee_id = int(user_input)
+            break
+        except ValueError:
+            print("*** ERROR *** Invalid attendee ID")
+            return
+
+    # Get name from MYSQL
+    conn = connect()
+    cur = conn.cursor()
+
+    cur.execute(
+        "SELECT attendeeName FROM attendee WHERE attendeeID = %s",
+        (attendee_id,)
+    )
+
+    result = cur.fetchone()
+    conn.close()
+
+    if not result:
+        print("*** ERROR *** Attendee does not exist (MySQL)")
         return
 
+    attendee_name = result[0]
+
+    # NEO4J
     driver = connect_neo4j()
 
     with driver.session(database="appdbprojNeo4j") as session:
 
-        # Get attendee name
-        result = session.run(
-            "MATCH (a:Attendee {AttendeeID: $id}) RETURN a.AttendeeID AS id",
-            id=attendee_id
-        )
+        result = session.run("""
+            MATCH (a:Attendee {AttendeeID: $id})
+            RETURN a.AttendeeID AS id
+        """, id=attendee_id)
 
         record = result.single()
 
         if not record:
-            print("*** ERROR *** Attendee does not exist")
+            print("No connections")
             driver.close()
             return
 
-        # Get name separately
-        name_result = session.run(
-            "MATCH (a:Attendee {AttendeeID: $id}) RETURN a.AttendeeID AS id",
-            id=attendee_id
-        )
-
-        print(f'Attendee ID: {attendee_id}')
+        print(f"\nAttendee ID: {attendee_id}")
+        print(f"Attendee Name: {attendee_name}")
         print("------------------------------")
 
-        # Get connections
         query = """
         MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(b:Attendee)
-        RETURN b.AttendeeID AS id, b.AttendeeName AS name
+        RETURN b.AttendeeID AS id
         """
 
         results = session.run(query, id=attendee_id)
@@ -184,12 +212,25 @@ def view_connected_attendees():
             print("No connections")
         else:
             for r in connections:
-                print(f"-> Attendee {r['id']}")
+                # también traemos nombres desde MySQL
+                conn = connect()
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT attendeeName FROM attendee WHERE attendeeID = %s",
+                    (r["id"],)
+                )
+                name_result = cur.fetchone()
+                conn.close()
+
+                name = name_result[0] if name_result else "Unknown"
+
+                print(f"{r['id']} | {name}")
 
     driver.close()
 
 
-# PENDING
+# Peding
+
 def add_attendee_connection():
     print("Not implemented yet")
 
