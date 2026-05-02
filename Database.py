@@ -22,6 +22,7 @@ def connect_neo4j():
 
     return GraphDatabase.driver(uri, auth=(user, password))
 
+rooms_cache = None
 
 # MYSQL FUNCTIONS
 
@@ -151,16 +152,14 @@ def add_new_attendee():
 
 def view_connected_attendees():
 
-    while True:
-        user_input = input("Enter Attendee ID: ")
-        try:
-            attendee_id = int(user_input)
-            break
-        except ValueError:
-            print("*** ERROR *** Invalid attendee ID")
-            return
+    # INPUT VALIDATION
+    try:
+        attendee_id = int(input("Enter Attendee ID: "))
+    except ValueError:
+        print("*** ERROR *** Invalid attendee ID")
+        return
 
-    # Get name from MYSQL
+    # MYSQL
     conn = connect()
     cur = conn.cursor()
 
@@ -170,10 +169,10 @@ def view_connected_attendees():
     )
 
     result = cur.fetchone()
-    conn.close()
 
     if not result:
-        print("*** ERROR *** Attendee does not exist (MySQL)")
+        print("*** ERROR *** Attendee does not exist")
+        conn.close()
         return
 
     attendee_name = result[0]
@@ -183,20 +182,7 @@ def view_connected_attendees():
 
     with driver.session(database="appdbprojNeo4j") as session:
 
-        result = session.run("""
-            MATCH (a:Attendee {AttendeeID: $id})
-            RETURN a.AttendeeID AS id
-        """, id=attendee_id)
-
-        record = result.single()
-
-        if not record:
-            print("No connections")
-            driver.close()
-            return
-
-        print(f"\nAttendee ID: {attendee_id}")
-        print(f"Attendee Name: {attendee_name}")
+        print(f"\n{attendee_id} | {attendee_name}")
         print("------------------------------")
 
         query = """
@@ -211,29 +197,120 @@ def view_connected_attendees():
         if not connections:
             print("No connections")
         else:
+
+            # getting names from mysql
+            ids = [r["id"] for r in connections]
+
+            format_strings = ",".join(["%s"] * len(ids))
+
+            cur.execute(
+                f"SELECT attendeeID, attendeeName FROM attendee WHERE attendeeID IN ({format_strings})",
+                tuple(ids)
+            )
+
+            name_map = dict(cur.fetchall())
+
             for r in connections:
-                # también traemos nombres desde MySQL
-                conn = connect()
-                cur = conn.cursor()
-                cur.execute(
-                    "SELECT attendeeName FROM attendee WHERE attendeeID = %s",
-                    (r["id"],)
-                )
-                name_result = cur.fetchone()
-                conn.close()
-
-                name = name_result[0] if name_result else "Unknown"
-
+                name = name_map.get(r["id"], "Unknown")
                 print(f"{r['id']} | {name}")
 
+    conn.close()
     driver.close()
 
-
-# Peding
-
 def add_attendee_connection():
-    print("Not implemented yet")
 
+    conn = connect()
+    cur = conn.cursor()
+
+    driver = connect_neo4j()
+
+    with driver.session(database="appdbprojNeo4j") as session:
+
+        while True:
+
+            # INPUT VALIDATION
+            
+            try:
+                id1 = int(input("Enter first Attendee ID: "))
+                id2 = int(input("Enter second Attendee ID: "))
+            except ValueError:
+                print("*** ERROR *** Attendee IDs must be numbers")
+                continue
+
+            # SELF CONNECTION CHECK
+            
+            if id1 == id2:
+                print("*** ERROR *** An attendee cannot connect to him/herself")
+                continue
+
+            # CHECK IN MYSQL
+            
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM attendee
+                WHERE attendeeID IN (%s, %s)
+            """, (id1, id2))
+
+            count = cur.fetchone()[0]
+
+            if count < 2:
+                print("*** ERROR *** One or both attendee IDs do not exist")
+                continue
+
+            # ENSURE NODES EXIST IN NEO4J
+            
+            session.run("""
+                MERGE (a:Attendee {AttendeeID: $id1})
+                MERGE (b:Attendee {AttendeeID: $id2})
+            """, id1=id1, id2=id2)
+
+            # CHECK EXISTING CONNECTION
+            
+            check = session.run("""
+                MATCH (a:Attendee {AttendeeID: $id1})-[:CONNECTED_TO]-(b:Attendee {AttendeeID: $id2})
+                RETURN count(*) AS c
+            """, id1=id1, id2=id2)
+
+            if check.single()["c"] > 0:
+                print("*** ERROR *** These attendees are already connected")
+                continue
+
+            # CREATE CONNECTION (SAFE)
+            
+            session.run("""
+                MATCH (a:Attendee {AttendeeID: $id1})
+                MATCH (b:Attendee {AttendeeID: $id2})
+                MERGE (a)-[:CONNECTED_TO]-(b)
+            """, id1=id1, id2=id2)
+
+            print(f"Attendee {id1} is now connected to Attendee {id2}")
+
+            break
+
+    cur.close()
+    conn.close()
+    driver.close()
 
 def view_rooms():
-    print("Not implemented yet")
+
+    global rooms_cache
+
+    if rooms_cache is None:
+
+        conn = connect()
+        cur = conn.cursor()
+
+        cur.execute("SELECT * FROM room")
+        rooms_cache = cur.fetchall()
+
+        conn.close()
+
+    if not rooms_cache:
+        print("No rooms found")
+        return
+
+    print("\nROOMS LIST")
+    print("----------------")
+
+    for room in rooms_cache:
+        print(room)

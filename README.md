@@ -13,11 +13,11 @@ Install "pymysql":
 
 Run in your terminal:
 
-python -m pip install pymysql
+python -m pip install pymysql so we can connect to MYSQL with python.
 
 Install also Neo4j
 
-python -m pip install neo4j
+python -m pip install neo4j so we can connect to Neo4j with python.
 
 Activate Neo4j.
 
@@ -73,3 +73,13 @@ https://neo4j.com/docs/python-manual/current/
 https://www.datacamp.com/tutorial/neo4j-tutorial?utm_cid=23781701478&utm_aid=196565213035&utm_campaign=260417_1-ps-dscia~amx-tofu~python_2-b2c_3-emea_4-prc_5-na_6-na_7-le_8-pdsh-go_9-nb-e_10-na_11-na&utm_loc=1007850-&utm_mtd=p-c&utm_kw=python%20user%20input&utm_source=google&utm_medium=paid_search&utm_content=ps-dscia~emea-en~amx~tofu~tutorial~python&gad_source=1&gad_campaignid=23781701478&gbraid=0AAAAADQ9WsGvoS6UtOIknIAJ57uB4Yuar&gclid=CjwKCAjw-8vPBhBbEiwAoA39WuFzNtHAz19u6EC2iKNw31sAj26wxEZ-MBPEt6UWaH7Hm26LyyiHlRoCMiEQAvD_BwE
 
 https://www.youtube.com/watch?v=ytzMN-b6v7E
+
+Neo4j relationships
+
+https://neo4j.com/docs/graph-data-science/current/management-ops/graph-write-to-neo4j/write-back-relationships/
+
+Cache function 
+
+https://docs.python.org/3/library/functools.html#functools.lru_cache
+
+https://en.wikipedia.org/wiki/Cache_(computing)
