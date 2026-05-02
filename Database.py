@@ -173,7 +173,7 @@ def view_connected_attendees():
         # Get connections
         query = """
         MATCH (a:Attendee {AttendeeID: $id})-[:CONNECTED_TO]-(b:Attendee)
-        RETURN b.AttendeeID AS id
+        RETURN b.AttendeeID AS id, b.AttendeeName AS name
         """
 
         results = session.run(query, id=attendee_id)
